@@ -1,0 +1,130 @@
+name: Vultr Instance Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'OprnTofu action'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      auto_approve:
+        description: 'Auto approve apply/destroy'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  TERRAFORM_VERSION: '1.5.7'
+
+jobs:
+  deploy-instances:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure Vultr credentials
+        run: |
+          echo "TF_VAR_vultr_api_key=${{ secrets.VULTR_API_KEY }}" >> $GITHUB_ENV
+          echo "TF_VAR_ssh_pub_key=${{ secrets.SSH_PUB_KEY }}" >> $GITHUB_ENV
+          echo "TF_VAR_tailscale_auth_key=${{ secrets.TAILSCALE_AUTH_KEY }}" >> $GITHUB_ENV
+      
+      - name: Configure backend
+        working-directory: infra/vultr/prod
+        run: |
+          cat > backend.tf << 'EOF'
+          terraform {
+            backend "s3" {
+              bucket = "${{ secrets.B2_BUCKET_NAME }}"
+              key    = "vultr/prod/terraform.tfstate"
+              region = "${{ secrets.B2_REGION }}"
+              endpoint = "${{ secrets.B2_URL }}"
+              skip_credentials_validation = true
+              skip_region_validation = true
+              skip_metadata_api_check = true
+            }
+          }
+          EOF
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+
+      - name: Initialize Terraform
+        working-directory: infra/vultr/prod
+        run: tofu init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+
+      - name: Terraform Plan
+        if: github.event.inputs.action == 'plan'
+        working-directory: infra/vultr/prod
+        run: |
+          tofu plan -var-file=terraform.tfvars -out=tfplan
+          tofu show -no-color tfplan > plan.txt
+          
+          echo "### Vultr Infrastructure Plan" >> $GITHUB_STEP_SUMMARY
+          echo '```terraform' >> $GITHUB_STEP_SUMMARY
+          tail -n 50 plan.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'apply'
+        working-directory: infra/vultr/prod
+        run: |
+          if [ "${{ github.event.inputs.auto_approve }}" = "true" ]; then
+            tofu apply -var-file=terraform.tfvars -auto-approve
+          else
+            tofu plan -var-file=terraform.tfvars -out=tfplan
+            tofu apply tfplan
+          fi
+          
+          tofu output -json > outputs.json
+          
+          echo "### Deployed Vultr Instances" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat outputs.json | jq '.' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        working-directory: infra/vultr/prod
+        run: |
+          if [ "${{ github.event.inputs.auto_approve }}" = "true" ]; then
+            tofu destroy -var-file=terraform.tfvars -auto-approve
+            echo "⚠️ Infrastructure destroyed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Destroy requires auto_approve to be checked for safety"
+            echo "❌ Destroy blocked - auto_approve not checked" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Update DNS records
+        if: github.event.inputs.action == 'apply'
+        working-directory: infra/vultr/prod
+        run: |
+          # Extract IPs from outputs
+          tofu output -json > outputs.json
+          
+          echo "✅ Infrastructure deployed. IPs available in outputs.json"
+          echo "📝 Update DNS records and Tailscale ACLs as needed"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: vultr-terraform-${{ github.event.inputs.action }}
+          path: |
+            infra/vultr/prod/tfplan
+            infra/vultr/prod/plan.txt
+            infra/vultr/prod/outputs.json

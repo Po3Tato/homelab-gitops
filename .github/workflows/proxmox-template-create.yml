@@ -1,0 +1,112 @@
+name: Proxmox Template Create
+
+on:
+  workflow_dispatch:
+    inputs:
+      template_name:
+        description: 'Template name (e.g., ubuntu-2204-template)'
+        required: true
+        type: string
+      cloud_image_url:
+        description: 'Cloud image URL'
+        required: true
+        type: string
+        default: 'https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img'
+      proxmox_node:
+        description: 'Target Proxmox node'
+        required: true
+        type: string
+        default: 'pve'
+      vm_id:
+        description: 'Template VM ID'
+        required: true
+        type: string
+        default: '9000'
+
+env:
+  TERRAFORM_VERSION: '1.5.7'
+
+jobs:
+  create-template:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:infra-ci
+          use-cache: 'true'
+
+      - name: Configure Proxmox credentials
+        run: |
+          echo "TF_VAR_virtual_environment_endpoint=${{ secrets.PROXMOX_API_URL }}" >> $GITHUB_ENV
+          echo "TF_VAR_virtual_environment_api_token=${{ secrets.PROXMOX_API_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Configure Backblaze backend
+        run: |
+          cat > infra/proxmox/templates/backend.tf <<EOF
+          terraform {
+            backend "s3" {
+              bucket = "${{ secrets.B2_BUCKET_NAME }}"
+              key    = "proxmox/templates/${{ inputs.template_name }}.tfstate"
+              region = "${{ secrets.B2_REGION }}"
+              endpoint = "${{ secrets.B2_URL }}"
+              skip_credentials_validation = true
+              skip_metadata_api_check     = true
+              skip_region_validation      = true
+            }
+          }
+          EOF
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+
+      - name: Initialize OpenTofu
+        working-directory: infra/proxmox/templates
+        run: tofu init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+
+      - name: Create template configuration
+        run: |
+          cat > infra/proxmox/templates/template.auto.tfvars <<EOF
+          template_name     = "${{ inputs.template_name }}"
+          cloud_image_url   = "${{ inputs.cloud_image_url }}"
+          proxmox_node      = "${{ inputs.proxmox_node }}"
+          vm_id             = ${{ inputs.vm_id }}
+          EOF
+
+      - name: Plan template creation
+        working-directory: infra/proxmox/templates
+        run: tofu plan -out=tfplan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+
+      - name: Apply template creation
+        working-directory: infra/proxmox/templates
+        run: tofu apply tfplan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+
+      - name: Output template details
+        working-directory: infra/proxmox/templates
+        run: |
+          echo "Template created successfully!"
+          tofu output -json > template-details.json
+          cat template-details.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}

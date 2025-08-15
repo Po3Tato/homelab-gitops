@@ -1,0 +1,139 @@
+name: System Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Maintenance action to perform'
+        required: true
+        type: choice
+        options:
+          - update
+          - update-all
+          - reboot
+          - status
+      environment:
+        description: 'Target environment'
+        required: false
+        type: choice
+        options:
+          - prod
+          - vps
+          - prod-proxy
+          - all
+        default: prod
+      host:
+        description: 'Specific host (optional)'
+        required: false
+        type: string
+  
+  # Weekly schedule - Sundays at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * 0'
+
+jobs:
+  maintenance:
+    name: System Maintenance
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install ansible
+          
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+      
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:infra-ci
+          use-cache: 'true'
+      
+      - name: Setup Ansible configuration
+        run: |
+          cat > ~/.ansible.cfg << EOF
+          [defaults]
+          host_key_checking = False
+          timeout = 30
+          [ssh_connection]
+          ssh_args = -o ControlMaster=auto -o ControlPersist=60s
+          EOF
+      
+      - name: Determine action
+        id: determine
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "action=update-all" >> $GITHUB_OUTPUT
+            echo "Running scheduled weekly update for all environments"
+          else
+            echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Execute maintenance action
+        run: |
+          case "${{ steps.determine.outputs.action }}" in
+            update)
+              if [ -z "${{ github.event.inputs.host }}" ]; then
+                echo "Updating all hosts in ${{ github.event.inputs.environment }}"
+                just update ${{ github.event.inputs.environment }}
+              else
+                echo "Updating ${{ github.event.inputs.host }} in ${{ github.event.inputs.environment }}"
+                just update ${{ github.event.inputs.environment }} ${{ github.event.inputs.host }}
+              fi
+              ;;
+            
+            update-all)
+              echo "Updating all infrastructure"
+              just update-all
+              ;;
+            
+            reboot)
+              if [ -z "${{ github.event.inputs.host }}" ]; then
+                echo "Rebooting all hosts in ${{ github.event.inputs.environment }}"
+                just reboot ${{ github.event.inputs.environment }}
+              else
+                echo "Rebooting ${{ github.event.inputs.host }} in ${{ github.event.inputs.environment }}"
+                just reboot ${{ github.event.inputs.environment }} ${{ github.event.inputs.host }}
+              fi
+              ;;
+            
+            status)
+              if [ -z "${{ github.event.inputs.host }}" ]; then
+                echo "Checking status of all hosts in ${{ github.event.inputs.environment }}"
+                just status ${{ github.event.inputs.environment }}
+              else
+                echo "Checking status of ${{ github.event.inputs.host }} in ${{ github.event.inputs.environment }}"
+                just status ${{ github.event.inputs.environment }} ${{ github.event.inputs.host }}
+              fi
+              ;;
+            
+            *)
+              echo "Unknown action: ${{ steps.determine.outputs.action }}"
+              exit 1
+              ;;
+          esac
+      
+      - name: Send notification
+        if: always()
+        run: |
+          # Add notification logic here if needed (Slack, Discord, Email, etc.)
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Maintenance action completed successfully"
+          else
+            echo "❌ Maintenance action failed"
+          fi
+          
+          echo "Action: ${{ steps.determine.outputs.action }}"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Host: ${{ github.event.inputs.host }}"
+          echo "Status: ${{ job.status }}"

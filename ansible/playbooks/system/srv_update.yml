@@ -1,0 +1,24 @@
+---
+- name: Update Infra
+  hosts: all
+  become: true
+  gather_facts: yes
+  tasks:
+    - name: Update nodes
+      tags: deb_srv
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        cache_valid_time: 3600
+
+    - name: Check if reboot required
+      tags: reboot_check
+      command: test -f /var/run/reboot-required
+      register: debian_reboot_required
+      failed_when: false
+      changed_when: false
+
+    - name: Reboot status of linux nodes
+      debug:
+        msg: "{{ inventory_hostname }} requires a reboot"
+      when: debian_reboot_required.rc == 0

@@ -1,0 +1,165 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - curl
+  - vim
+  - iputils-ping
+  - git
+users:
+  - name: ${USERNAME}
+    groups: sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ${SSH_KEY}
+    lock_passwd: true
+    passwd: '*'
+hostname: ${HOSTNAME}
+fqdn: ${HOSTNAME}.${DOMAIN}
+timezone: UTC
+prefer_fqdn_over_hostname: false
+manage_etc_hosts: true
+write_files:
+  - path: /root/scripts/ts-startup.sh
+    permissions: '0700'
+    content: |
+      #!/usr/bin/env bash
+      set -e  # Exit on any error
+      
+      # Install Tailscale with retry logic
+      if ! command -v tailscale &> /dev/null; then
+          echo "Installing Tailscale..."
+          for i in {1..3}; do
+              if curl -fsSL https://tailscale.com/install.sh | sh > /dev/null 2>&1; then
+                  echo "Tailscale installed successfully"
+                  break
+              else
+                  echo "Tailscale install attempt $i failed, retrying..."
+                  sleep 5
+              fi
+          done
+      fi
+      
+      # Connect to Tailscale with retry logic
+      if ! tailscale status &> /dev/null; then
+          echo "Connecting to Tailscale..."
+          for i in {1..3}; do
+              if tailscale up --ssh --authkey ${TAILSCALE_AUTH_KEY} > /dev/null 2>&1; then
+                  echo "Tailscale connected successfully"
+                  break
+              else
+                  echo "Tailscale connection attempt $i failed, retrying..."
+                  sleep 10
+              fi
+          done
+      fi
+
+  - path: /root/scripts/setup-system.sh
+    permissions: '0700'
+    content: |
+      #!/usr/bin/env bash
+      set -e
+      
+      echo "Setting up system configuration..."
+
+      mkdir -p /home/${USERNAME}/docker
+      chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/docker
+
+      # Install Docker
+      echo "Installing Docker..."
+      curl -fsSL https://get.docker.com | sh
+
+      # Post Docker
+      usermod -aG docker ${USERNAME}
+      systemctl enable docker
+      systemctl start docker
+
+      # Configure IP forwarding for Tailscale
+      echo 'net.ipv4.ip_forward = 1' > /etc/sysctl.d/99-tailscale.conf
+      echo 'net.ipv6.conf.all.forwarding = 1' >> /etc/sysctl.d/99-tailscale.conf
+      sysctl -p /etc/sysctl.d/99-tailscale.conf > /dev/null 2>&1
+
+      # Configure custom MOTD setup
+      touch /etc/motd
+      rm -f /etc/update-motd.d/00-header
+      rm -f /etc/update-motd.d/10-help-text
+      rm -f /etc/update-motd.d/50-landscape-sysinfo
+      rm -f /etc/update-motd.d/50-motd-news
+      rm -f /etc/update-motd.d/60-unminimize
+      rm -f /etc/update-motd.d/85-fwupd
+      rm -f /etc/update-motd.d/88-esm-announce
+      rm -f /etc/update-motd.d/91-contract-ua-esm-status
+      rm -f /etc/update-motd.d/91-release-upgrade
+      rm -f /etc/update-motd.d/95-hwe-eol
+      systemctl restart systemd-update-motd > /dev/null 2>&1
+
+      sed -i 's/^%sudo.*/%sudo ALL=(ALL) NOPASSWD:ALL/' /etc/sudoers
+      passwd -l root
+
+      chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
+
+  - path: /etc/update-motd.d/10-custom-motd
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Robust system information gathering with error handling
+      HOSTNAME=$(hostname 2>/dev/null || echo "Unknown")
+      KERNEL=$(uname -r 2>/dev/null || echo "Unknown")
+      UPTIME=$(uptime -p 2>/dev/null || echo "Unknown")
+      LOAD=$(cat /proc/loadavg 2>/dev/null | awk '{print $1 ", " $2 ", " $3}' || echo "Unknown")
+      MEMORY=$(free -h 2>/dev/null | grep "Mem:" | awk '{print $3 "/" $2}' || echo "Unknown")
+      DISK=$(df -h / 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}' || echo "Unknown")
+      USERS=$(who 2>/dev/null | wc -l || echo "0")
+      INTERNAL_IP=$(ip -4 addr show 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "127.0.0.1" | head -n 1 || echo "Unknown")
+      TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "Not connected")
+      DATA_DISKS=""
+      if [ -d "/data" ]; then
+        DATA_DISKS=$(df -h 2>/dev/null | grep "/data" | awk '{printf "%s: %s/%s (%s)\n", $6, $3, $2, $5}' || echo "")
+      fi
+      cat << 'EOF'
+
+           __  __                   
+          |  \/  |_   _ ___  ___   
+          | |\/| | | | / __|/ _ \  
+          | |  | | |_| \__ \ (_) | 
+          |_|  |_|\__,_|___/\___/  
+                                   
+            ____ _     ___  _   _ ____     __     __    _ _   _____ ____  
+           / ___| |   / _ \| | | |  _ \    \ \   / / | | | | |_   _|  _ \ 
+          | |   | |  | | | | | | | | | |____\ \ / /| | | | |   | | | |_) |
+          | |___| |__| |_| | |_| | |_| |_____\ V / | |_| | |___| | |  _ < 
+           \____|_____\___/ \___/|____/       \_/   \___/|_____|_| |_| \_\
+
+      EOF
+      echo "Welcome to VPS-$HOSTNAME"
+      echo "Managed by Muso"
+      echo "─────────────────────────────────────────────────────"
+      echo "🖥️  System Information:"
+      echo " ⚙️  Kernel: $KERNEL"
+      echo " ⏰ Uptime: $UPTIME"
+      echo " 📊 Load: $LOAD"
+      echo " 🧠 Memory: $MEMORY"
+      echo " 💾 Disk Usage: $DISK"
+      echo " 🌐 Internal IP: $INTERNAL_IP"
+      echo " 🔒 Tailscale IP: $TAILSCALE_IP"
+      echo " 👥 Users: $USERS active"
+      if [ ! -z "$DATA_DISKS" ]; then
+        echo " 📂 Data Disks:"
+        echo "$DATA_DISKS" | sed 's/^/   /'
+      fi
+      echo "─────────────────────────────────────────────────────"
+      echo "⚠️  ATTENTION: THIS SYSTEM IS FOR AUTHORIZED USERS ONLY ⚠️ "
+
+runcmd:
+  - chmod 0700 /root/scripts/ts-startup.sh
+  - chmod 0700 /root/scripts/setup-system.sh
+  - /root/scripts/ts-startup.sh
+  - /root/scripts/setup-system.sh
+
+power_state:
+  delay: "+1"
+  mode: reboot
+  message: "System setup complete, rebooting..."
+  timeout: 30
+  condition: True

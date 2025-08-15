@@ -1,0 +1,22 @@
+# Claude Code
+.claude/
+GITHUB_SECRETS.md
+
+# Terraform/OpenTofu files
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+.terraform/
+.terraform.lock.hcl
+backend.tf
+
+# Ansible files
+*.retry
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
