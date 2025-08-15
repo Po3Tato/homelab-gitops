@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       template_name:
-        description: 'Template name (e.g., ubuntu-2204-template)'
+        description: 'Template name'
         required: true
         type: string
       cloud_image_url:
