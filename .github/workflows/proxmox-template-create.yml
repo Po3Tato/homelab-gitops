@@ -53,7 +53,7 @@ jobs:
       - name: Test Proxmox connectivity
         run: |
           echo "Testing connectivity to Proxmox host..."
-          curl -k -s --connect-timeout 10 ${{ secrets.PROXMOX_API_URL }}/api2/json/version || echo "Connection failed"
+          curl -k -s --connect-timeout 10 ${{ secrets.PROXMOX_API_URL }} || echo "Connection failed"
           
       - name: Configure Proxmox credentials and variables
         run: |
