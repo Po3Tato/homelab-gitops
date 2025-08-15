@@ -45,6 +45,16 @@ jobs:
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:infra-ci
 
+      - name: Configure Tailscale exit node
+        run: |
+          sudo tailscale up --exit-node=${{ secrets.TAILSCALE_EXIT_NODE }} --accept-routes
+          tailscale status
+
+      - name: Test Proxmox connectivity
+        run: |
+          echo "Testing connectivity to Proxmox host..."
+          curl -k -s --connect-timeout 10 ${{ secrets.PROXMOX_API_URL }}/api2/json/version || echo "Connection failed"
+          
       - name: Configure Proxmox credentials and variables
         run: |
           echo "TF_VAR_virtual_environment_endpoint=${{ secrets.PROXMOX_API_URL }}" >> $GITHUB_ENV
