@@ -51,6 +51,9 @@ jobs:
           echo "TF_VAR_virtual_environment_endpoint=${{ secrets.PROXMOX_API_URL }}" >> $GITHUB_ENV
           echo "TF_VAR_virtual_environment_api_token=${{ secrets.PROXMOX_API_TOKEN }}" >> $GITHUB_ENV
 
+      - name: Create templates directory
+        run: mkdir -p infra/proxmox/templates
+
       - name: Configure Backblaze backend
         run: |
           cat > infra/proxmox/templates/backend.tf <<EOF
