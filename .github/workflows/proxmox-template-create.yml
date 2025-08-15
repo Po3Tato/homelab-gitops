@@ -45,7 +45,6 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:infra-ci
-          use-cache: 'true'
 
       - name: Configure Proxmox credentials
         run: |
