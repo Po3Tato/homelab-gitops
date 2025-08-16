@@ -1,0 +1,31 @@
+---
+# Ansible Lint Configuration
+exclude_paths:
+  - .cache/
+  - .github/
+  - .git/
+
+# Enable checking of loop variable prefixes in roles
+loop_var_prefix: ^(__|{role_name}_)
+
+# Enable offline mode to avoid network calls
+offline: false
+
+# Use default rules
+use_default_rules: true
+
+# Skip specific rules if needed
+skip_list:
+  - yaml[line-length]  # Allow longer lines in YAML files
+  - name[casing]       # Allow different casing conventions
+
+# Warning level rules that won't fail the build
+warn_list:
+  - experimental
+  - jinja[spacing]
+
+# Enable progressive mode for better error reporting
+progressive: true
+
+# Set the minimum version of Ansible supported
+min_ansible_version: "2.14"

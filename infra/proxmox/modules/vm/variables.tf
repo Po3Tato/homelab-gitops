@@ -204,3 +204,53 @@ variable "hostpci" {
     error_message = "PCI device names must follow pattern 'hostpciN' where N is a number."
   }
 }
+
+# === CLOUD-INIT CONFIGURATION ===
+variable "cloud_init_enabled" {
+  description = "Enable cloud-init configuration"
+  type        = bool
+  default     = true
+}
+
+variable "cloud_init_datastore" {
+  description = "Datastore for cloud-init drive (defaults to same as disk)"
+  type        = string
+  default     = null
+}
+
+variable "ssh_public_key" {
+  description = "SSH public key for cloud-init user setup"
+  type        = string
+  default     = ""
+}
+
+variable "hostname" {
+  description = "Hostname for cloud-init (defaults to VM name)"
+  type        = string
+  default     = ""
+}
+
+variable "domain" {
+  description = "Domain name for FQDN"
+  type        = string
+  default     = "local"
+}
+
+variable "tailscale_authkey" {
+  description = "Tailscale auth key for automatic connection"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "install_tailscale" {
+  description = "Install and configure Tailscale"
+  type        = bool
+  default     = true
+}
+
+variable "install_docker" {
+  description = "Install and configure Docker"
+  type        = bool
+  default     = true
+}

@@ -1,8 +1,3 @@
-# === SHARED CONFIGURATION ===
-# Import shared provider and outputs configuration
-# This eliminates duplication across prod, prod-pigsty, and prod-proxy environments
-
-# Shared provider configuration
 terraform {
   required_providers {
     proxmox = {
@@ -18,7 +13,6 @@ provider "proxmox" {
   insecure  = false
 }
 
-# === LOCAL VALUES ===
 locals {
   node_names = toset([for k, v in var.vms : v.node_name])
 }
@@ -91,7 +85,6 @@ EOF
 }
 
 # === SHARED OUTPUTS ===
-# VM IDENTIFICATION OUTPUTS
 output "vm_ids" {
   description = "Map of VM keys to their Proxmox VM IDs"
   value = {

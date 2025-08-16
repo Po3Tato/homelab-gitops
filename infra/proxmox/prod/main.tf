@@ -14,61 +14,82 @@ provider "proxmox" {
 }
 
 locals {
-  node_names = toset([for k, v in var.vms : v.node_name])
+  generated_vms = {
+    for deployment_key, deployment in var.vm_deployments : 
+    deployment_key => [
+      for i in range(deployment.count) : {
+        key            = "${deployment_key}-${format("%02d", i + 1)}"
+        name           = "${deployment.name_prefix}-${format("%02d", i + 1)}"
+        vm_id          = deployment.vm_id_start + i
+        config_template = deployment.config_template
+        template_config = var.vm_config_templates[deployment.config_template]
+      }
+    ]
+  }
+  
+  vms = {
+    for deployment_key, vms in local.generated_vms :
+    deployment_key => {
+      for vm in vms : vm.key => vm
+    }
+  }
+  
+  all_vms = merge([
+    for deployment_key, vm_map in local.vms : vm_map
+  ]...)
 }
 
 module "vms" {
   source   = "../modules/vm"
-  for_each = var.vms
+  for_each = local.all_vms
   
   name      = each.value.name
   vm_id     = each.value.vm_id
-  node_name = var.override_node_name != null ? var.override_node_name : each.value.node_name
+  node_name = var.proxmox_nodes[each.value.template_config.node_number]
 
-  clone_vm_id        = var.override_template_id != null ? var.override_template_id : each.value.clone_vm_id
-  clone_node_name    = lookup(each.value, "clone_node_name", each.value.node_name)
-  clone_datastore_id = lookup(each.value, "clone_datastore_id", var.datastore_disk)
-  full_clone         = lookup(each.value, "full_clone", var.default_full_clone)
+  clone_vm_id        = var.proxmox_templates[each.value.template_config.node_number]
+  clone_node_name    = var.proxmox_nodes[each.value.template_config.node_number]
+  clone_datastore_id = var.datastore_disk
+  full_clone         = var.default_full_clone
 
-  description = lookup(each.value, "description", <<-EOF
-06/24/2025 ver 1.0
-Services Install
+  description = each.value.template_config.description
 
-    Tailscale [link to docs]
-    Docker [link to docs]
-    Pangolin [link to docs]
+  cpu_cores       = each.value.template_config.cpu_cores
+  cpu_type        = var.default_cpu_type
+  hotplug_cpu     = var.default_hotplug_cpu
+  hotplugged_vcpu = var.default_hotplugged_vcpu
+  max_cpu         = var.default_max_cpu
+  numa            = var.default_numa
 
-EOF
-  )
+  memory          = each.value.template_config.memory
+  floating_memory = null
 
-  cpu_cores       = each.value.cpu_cores
-  cpu_type        = lookup(each.value, "cpu_type", var.default_cpu_type)
-  hotplug_cpu     = lookup(each.value, "hotplug_cpu", var.default_hotplug_cpu)
-  hotplugged_vcpu = lookup(each.value, "hotplugged_vcpu", var.default_hotplugged_vcpu)
-  max_cpu         = lookup(each.value, "max_cpu", var.default_max_cpu)
-  numa            = lookup(each.value, "numa", var.default_numa)
+  machine_type = var.default_machine_type
+  viommu       = var.default_viommu
 
-  memory          = each.value.memory
-  floating_memory = lookup(each.value, "floating_memory", null)
-
-  machine_type = lookup(each.value, "machine_type", var.default_machine_type)
-  viommu       = lookup(each.value, "viommu", var.default_viommu)
-
-  disk_size     = lookup(each.value, "disk_size", null)
+  disk_size      = each.value.template_config.disk_size
   datastore_disk = var.datastore_disk
-  iothread      = lookup(each.value, "iothread", var.default_iothread)
-  ssd_emulation = lookup(each.value, "ssd_emulation", var.default_ssd_emulation)
-  discard       = lookup(each.value, "discard", var.default_discard)
+  iothread       = var.default_iothread
+  ssd_emulation  = var.default_ssd_emulation
+  discard        = var.default_discard
 
   network_bridge = var.network_bridge
-  vlan_id        = each.value.vlan_id
+  vlan_id        = var.vlan_prod
 
   agent_enabled = var.agent_enabled
-  vm_reboot     = lookup(each.value, "vm_reboot", var.vm_reboot)
+  vm_reboot     = var.vm_reboot
 
-  tags = concat(["opentofu", "ubuntu", "prod"], lookup(each.value, "tags", []))
+  tags = concat(["opentofu", "ubuntu", "prod"], each.value.template_config.tags)
 
-  hostpci = lookup(each.value, "hostpci", [])
+  hostpci = []
+  
+  # Cloud-init configuration
+  ssh_public_key    = var.ssh_public_key
+  tailscale_authkey = var.tailscale_authkeys[each.value.template_config.tailscale_authkey]
+  hostname          = each.value.name
+  domain            = var.domain_name
+  install_tailscale = true
+  install_docker    = true
 }
 
 output "vm_ids" {
@@ -89,7 +110,7 @@ output "vm_info" {
   description = "Complete VM information including node, name, VM ID, and IP address"
   value = {
     for k, v in module.vms : k => {
-      node    = var.vms[k].node_name
+      node    = v.node_name
       name    = v.vm_name
       vm_id   = v.vm_id
       ip      = v.primary_ip
@@ -102,9 +123,4 @@ output "vm_ips" {
   value = {
     for k, v in module.vms : k => v.vm_ips
   }
-}
-
-output "all_node_names" {
-  description = "All Proxmox nodes used by VMs"
-  value = tolist(local.node_names)
 }

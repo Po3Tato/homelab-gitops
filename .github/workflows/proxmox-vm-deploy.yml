@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy (prod, prod-proxy)'
+        description: 'Environment to deploy'
         required: true
         type: choice
         options:
@@ -23,20 +23,6 @@ on:
         required: false
         type: boolean
         default: false
-      override_template_id:
-        description: 'Override template VM ID for cloning (optional)'
-        required: false
-        type: string
-      override_node:
-        description: 'Override target node for all VMs (optional)'
-        required: false
-        type: choice
-        options:
-          - ''
-          - '1'
-          - '2'
-          - '3'
-        default: ''
 
 env:
   TERRAFORM_VERSION: '1.10.5'
@@ -67,25 +53,27 @@ jobs:
           echo "TF_VAR_virtual_environment_endpoint=${{ secrets.PROXMOX_API_URL }}" >> $GITHUB_ENV
           echo "TF_VAR_virtual_environment_api_token=${{ secrets.PROXMOX_API_TOKEN }}" >> $GITHUB_ENV
           
-      - name: Configure template override
-        if: ${{ github.event.inputs.override_template_id != '' }}
+      - name: Configure Terraform variables
+        working-directory: infra/proxmox/${{ github.event.inputs.environment }}
         run: |
-          echo "TF_VAR_override_template_id=${{ github.event.inputs.override_template_id }}" >> $GITHUB_ENV
+          echo "TF_VAR_datastore_disk=${{ secrets.PROXMOX_DATASTORE }}" >> $GITHUB_ENV
+          echo "TF_VAR_network_bridge=${{ secrets.PROXMOX_NETWORK_BRIDGE }}" >> $GITHUB_ENV
+          echo "TF_VAR_vlan_prod=${{ secrets.VLAN_PROD }}" >> $GITHUB_ENV
           
-      - name: Configure node override
-        if: ${{ github.event.inputs.override_node != '' }}
-        run: |
-          case "${{ github.event.inputs.override_node }}" in
-            "1")
-              echo "TF_VAR_override_node_name=${{ secrets.PROXMOX_NODE_1 }}" >> $GITHUB_ENV
-              ;;
-            "2")
-              echo "TF_VAR_override_node_name=${{ secrets.PROXMOX_NODE_2 }}" >> $GITHUB_ENV
-              ;;
-            "3")
-              echo "TF_VAR_override_node_name=${{ secrets.PROXMOX_NODE_3 }}" >> $GITHUB_ENV
-              ;;
-          esac
+          echo 'TF_VAR_vm_deployments=${{ secrets.VM_DEPLOYMENTS }}' >> $GITHUB_ENV
+          
+          TEMPLATES='{"1": ${{ secrets.PROXMOX_TEMPLATE_VM_ID_1 }}, "2": ${{ secrets.PROXMOX_TEMPLATE_VM_ID_2 }}}'
+          echo "TF_VAR_proxmox_templates=$TEMPLATES" >> $GITHUB_ENV
+          
+          # Build node mappings (1 -> PROXMOX_NODE_1, 2 -> PROXMOX_NODE_2, etc.)
+          NODES='{"1": "${{ secrets.PROXMOX_NODE_1 }}", "2": "${{ secrets.PROXMOX_NODE_2 }}", "3": "${{ secrets.PROXMOX_NODE_3 }}"}'
+          echo "TF_VAR_proxmox_nodes=$NODES" >> $GITHUB_ENV
+          
+          echo "TF_VAR_ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}" >> $GITHUB_ENV
+          echo "TF_VAR_domain_name=${{ secrets.DOMAIN_NAME }}" >> $GITHUB_ENV
+          
+          TAILSCALE_KEYS='{"controlplane": "${{ secrets.TAILSCALE_AUTHKEY_CP }}", "workers": "${{ secrets.TAILSCALE_AUTHKEY_WKR }}"}'
+          echo "TF_VAR_tailscale_authkeys=$TAILSCALE_KEYS" >> $GITHUB_ENV
       
       - name: Configure backend
         working-directory: infra/proxmox/${{ github.event.inputs.environment }}
@@ -118,7 +106,7 @@ jobs:
         if: github.event.inputs.action == 'plan'
         working-directory: infra/proxmox/${{ github.event.inputs.environment }}
         run: |
-          tofu plan -var-file=terraform.tfvars -out=tfplan
+          tofu plan -out=tfplan
           tofu show -no-color tfplan > plan.txt
           
           # Post plan as PR comment if this is from a PR
@@ -136,9 +124,9 @@ jobs:
         working-directory: infra/proxmox/${{ github.event.inputs.environment }}
         run: |
           if [ "${{ github.event.inputs.auto_approve }}" = "true" ]; then
-            tofu apply -var-file=terraform.tfvars -auto-approve
+            tofu apply -auto-approve
           else
-            tofu plan -var-file=terraform.tfvars -out=tfplan
+            tofu plan -out=tfplan
             tofu apply tfplan
           fi
         env:
@@ -150,7 +138,7 @@ jobs:
         working-directory: infra/proxmox/${{ github.event.inputs.environment }}
         run: |
           if [ "${{ github.event.inputs.auto_approve }}" = "true" ]; then
-            tofu destroy -var-file=terraform.tfvars -auto-approve
+            tofu destroy -auto-approve
           else
             echo "⚠️  Destroy requires auto_approve to be checked for safety"
             exit 1

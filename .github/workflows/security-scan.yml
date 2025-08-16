@@ -1,0 +1,179 @@
+name: Security Scanning
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  infrastructure-security:
+    name: Infrastructure Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform,ansible
+          output_format: sarif
+          output_file_path: reports/checkov-results.sarif
+          download_external_modules: true
+          quiet: false
+          config_file: .checkov.yml
+
+      - name: Upload Checkov results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: reports/checkov-results.sarif
+          category: "Infrastructure Security"
+
+  secrets-scanning:
+    name: Secrets Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for TruffleHog
+
+      - name: Run TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  dependency-scanning:
+    name: Dependency Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install ansible
+          pip install safety
+
+      - name: Check Python dependencies for vulnerabilities
+        run: |
+          pip freeze | safety check --stdin || true
+
+      - name: Check GitHub Actions for security issues
+        uses: github/super-linter@v4
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+
+  terraform-security:
+    name: OpenTofu Security Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: '1.10.5'
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: infra/
+          format: sarif
+          output: tfsec-results.sarif
+
+      - name: Upload tfsec results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: tfsec-results.sarif
+          category: "Terraform Security"
+
+  ansible-security:
+    name: Ansible Security Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible and security tools
+        run: |
+          pip install ansible ansible-lint
+
+      - name: Run ansible-lint security checks
+        working-directory: ansible
+        run: |
+          ansible-lint --profile=production playbooks/ || true
+
+  summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [infrastructure-security, secrets-scanning, dependency-scanning, terraform-security, ansible-security]
+    if: always()
+
+    steps:
+      - name: Generate Security Summary
+        run: |
+          echo "# Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.infrastructure-security.result }}" == "success" ]; then
+            echo "✅ Infrastructure Security (Checkov): PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Infrastructure Security (Checkov): FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.secrets-scanning.result }}" == "success" ]; then
+            echo "✅ Secrets Scanning (TruffleHog): PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Secrets Scanning (TruffleHog): FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.dependency-scanning.result }}" == "success" ]; then
+            echo "✅ Dependency Scanning: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Dependency Scanning: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.terraform-security.result }}" == "success" ]; then
+            echo "✅ Terraform Security (tfsec): PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Terraform Security (tfsec): FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.ansible-security.result }}" == "success" ]; then
+            echo "✅ Ansible Security: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Ansible Security: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Recommendations" >> $GITHUB_STEP_SUMMARY
+          echo "- Review security findings in the GitHub Security tab" >> $GITHUB_STEP_SUMMARY
+          echo "- Address any high-severity vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "- Keep dependencies updated regularly" >> $GITHUB_STEP_SUMMARY

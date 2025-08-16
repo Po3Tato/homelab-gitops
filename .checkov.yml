@@ -1,0 +1,46 @@
+---
+# Checkov configuration for infrastructure security scanning
+
+# Directories to scan
+directory:
+  - infra/
+  - ansible/
+
+# Frameworks to scan
+framework:
+  - terraform
+  - ansible
+
+# Skip specific checks that may not apply to homelab environment
+skip-check:
+  # Terraform
+  - CKV_TF_1   # Ensure Terraform module sources use a commit hash
+  - CKV2_AWS_5 # Ensure that Security Groups are attached to another resource
+  
+  # Proxmox specific (these may not have equivalents)
+  - CKV_PROXMOX_1
+  - CKV_PROXMOX_2
+
+# Custom policies directory (if you create any)
+# external-checks-dir: .checkov/
+
+# Output format
+output: cli
+
+# Quiet mode - reduce noise
+quiet: false
+
+# Compact output
+compact: true
+
+# Download external modules for analysis
+download-external-modules: true
+
+# Include suppressed checks in output
+include-all-checkov-policies: true
+
+# Severity threshold
+# check: HIGH,MEDIUM
+
+# Create baseline file to track known issues
+# baseline: .checkov.baseline

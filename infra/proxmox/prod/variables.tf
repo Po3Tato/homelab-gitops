@@ -1,6 +1,6 @@
 # === BASE NAMING CONFIGURATION ===
 variable "vm_basename" {
-  description = "Base name for VMs (generic for security)"
+  description = "Base name for VMs"
   type        = string
   default     = "vm"
 }
@@ -11,48 +11,70 @@ variable "environment" {
   default     = "prod"
 }
 
-# === VM CONFIGURATION ===
-variable "vms" {
-  description = "Map of VMs with their configurations"
+# === VM CONFIGURATION TEMPLATES ===
+variable "vm_config_templates" {
+  description = "VM configuration templates"
   type = map(object({
-    node_name          = string
-    name               = string
-    vm_id              = number
-    cpu_cores          = number
-    memory             = number
-    floating_memory    = optional(number)
-    disk_size          = optional(number)
-    vlan_id            = number
-    vm_reboot          = optional(bool)
-    cpu_type           = optional(string)
-    hotplug_cpu        = optional(bool)
-    hotplugged_vcpu    = optional(number)
-    max_cpu            = optional(number)
-    machine_type       = optional(string)
-    viommu             = optional(string)
-    tags               = optional(list(string), [])
-    clone_vm_id        = number
-    clone_node_name    = optional(string)
-    clone_datastore_id = optional(string)
-    full_clone         = optional(bool)
-    discard            = optional(string)
-    hostpci = optional(list(object({
-      device  = string
-      mapping = string
-      pcie    = optional(bool)
-      rombar  = optional(bool)
-      xvga    = optional(bool)
-    })), [])
+    cpu_cores         = number
+    memory            = number
+    disk_size         = number
+    tags              = list(string)
+    tailscale_authkey = string
+    description       = string
+    node_number       = string
   }))
-  default = {}
+  default = {
+    "1" = {
+      cpu_cores         = 2
+      memory            = 4096
+      disk_size         = 32
+      tags              = ["github-actions", "prod"]
+      tailscale_authkey = "controlplane"
+      description       = "Production VM - Control Plane Configuration"
+      node_number       = "1"
+    }
+    "2" = {
+      cpu_cores         = 4
+      memory            = 8192
+      disk_size         = 64
+      tags              = ["github-actions", "prod"]
+      tailscale_authkey = "workers"
+      description       = "Production VM - Worker Node Configuration"
+      node_number       = "2"
+    }
+  }
+}
+
+# === VM DEPLOYMENT CONFIGURATION ===
+variable "vm_deployments" {
+  description = "Number of VMs to deploy for each configuration template"
+  type = map(object({
+    count           = number
+    config_template = string
+    vm_id_start     = number
+    name_prefix     = string
+    node_number     = string 
+  }))
+  default = {
+    vm = {
+      count           = 2
+      config_template = "1"
+      vm_id_start     = 201
+      name_prefix     = "node01"
+      node_number     = "1"
+    }
+    
+    vm = {
+      count           = 1
+      config_template = "2"
+      vm_id_start     = 210
+      name_prefix     = "node02"
+      node_number     = "1"
+    }
+  }
 }
 
 # === INFRASTRUCTURE SETTINGS ===
-variable "node_name" {
-  description = "Default Proxmox node name"
-  type        = string
-}
-
 variable "datastore_disk" {
   description = "Datastore for VM disks"
   type        = string
@@ -168,14 +190,40 @@ variable "default_discard" {
   default     = "on"
 }
 
-variable "override_template_id" {
-  description = "Override template VM ID for all VMs (optional, from workflow input)"
-  type        = number
-  default     = null
+# === TEMPLATE MAPPINGS ===
+variable "proxmox_templates" {
+  description = "Map of template numbers to VM IDs"
+  type        = map(number)
+  default = {}
 }
 
-variable "override_node_name" {
-  description = "Override target node for all VMs (optional, from workflow input)"
+variable "proxmox_nodes" {
+  description = "Map of node numbers to node names"
+  type        = map(string)
+  default = {}
+}
+
+variable "vlan_prod" {
+  description = "Production VLAN ID"
+  type        = number
+}
+
+# === CLOUD-INIT CONFIGURATION ===
+variable "ssh_public_key" {
+  description = "SSH public key for VM access"
   type        = string
-  default     = null
+  default     = ""
+}
+
+variable "tailscale_authkeys" {
+  description = "Map of Tailscale auth keys by type"
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
+variable "domain_name" {
+  description = "Domain name for FQDN"
+  type        = string
+  default     = "homelab.local"
 }

@@ -7,14 +7,16 @@ terraform {
 }
 
 locals {
-  safe_hotplug_cpu     = var.hotplug_cpu == null ? false : var.hotplug_cpu
-  safe_max_cpu         = var.max_cpu == null ? var.cpu_cores : var.max_cpu
-  safe_machine_type    = var.machine_type == null ? "pc" : var.machine_type
-  safe_viommu          = var.viommu == null ? "" : var.viommu
-  safe_iothread        = var.iothread == null ? true : var.iothread
-  safe_ssd_emulation   = var.ssd_emulation == null ? true : var.ssd_emulation
-  safe_discard         = var.discard == null ? "on" : var.discard
-  safe_hotplugged_vcpu = var.hotplugged_vcpu != null ? var.hotplugged_vcpu : (local.safe_hotplug_cpu ? (local.safe_max_cpu - var.cpu_cores) : 0)
+  safe_hotplug_cpu       = var.hotplug_cpu == null ? false : var.hotplug_cpu
+  safe_max_cpu           = var.max_cpu == null ? var.cpu_cores : var.max_cpu
+  safe_machine_type      = var.machine_type == null ? "pc" : var.machine_type
+  safe_viommu            = var.viommu == null ? "" : var.viommu
+  safe_iothread          = var.iothread == null ? true : var.iothread
+  safe_ssd_emulation     = var.ssd_emulation == null ? true : var.ssd_emulation
+  safe_discard           = var.discard == null ? "on" : var.discard
+  safe_hotplugged_vcpu   = var.hotplugged_vcpu != null ? var.hotplugged_vcpu : (local.safe_hotplug_cpu ? (local.safe_max_cpu - var.cpu_cores) : 0)
+  safe_hostname          = var.hostname != "" ? var.hostname : var.name
+  safe_cloud_init_ds     = var.cloud_init_datastore != null ? var.cloud_init_datastore : var.datastore_disk
 }
 
 resource "proxmox_virtual_environment_vm" "vm" {
@@ -147,10 +149,40 @@ resource "proxmox_virtual_environment_vm" "vm" {
   timeout_start_vm    = 1800                               # Start timeout (30 minutes)
   timeout_stop_vm     = 300                                # Force stop timeout (5 minutes)
 
+  # === CLOUD-INIT CONFIGURATION ===
+  dynamic "initialization" {
+    for_each = var.cloud_init_enabled ? [1] : []
+    content {
+      datastore_id      = local.safe_cloud_init_ds
+      user_data_file_id = proxmox_virtual_environment_file.cloud_init_config[0].id
+    }
+  }
+
   # === LIFECYCLE MANAGEMENT ===
   lifecycle {
     ignore_changes = [
       description,
     ]
+  }
+}
+
+# === CLOUD-INIT CONFIG FILE ===
+resource "proxmox_virtual_environment_file" "cloud_init_config" {
+  count = var.cloud_init_enabled ? 1 : 0
+  
+  content_type = "snippets"
+  datastore_id = local.safe_cloud_init_ds
+  node_name    = var.node_name
+
+  source_raw {
+    data = templatefile("${path.module}/../../cloud-init/base-ubuntu.yml", {
+      hostname           = local.safe_hostname
+      domain            = var.domain
+      ssh_public_key    = var.ssh_public_key
+      tailscale_authkey = var.tailscale_authkey
+      install_tailscale = var.install_tailscale
+      install_docker    = var.install_docker
+    })
+    file_name = "cloud-init-${var.name}.yml"
   }
 }
