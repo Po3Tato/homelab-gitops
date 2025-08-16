@@ -254,3 +254,9 @@ variable "install_docker" {
   type        = bool
   default     = true
 }
+
+variable "user_data_file_id" {
+  description = "Cloud-init user data file ID (e.g., from proxmox_virtual_environment_file resource)"
+  type        = string
+  default     = null
+}

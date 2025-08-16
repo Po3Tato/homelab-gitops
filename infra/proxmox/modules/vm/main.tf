@@ -154,14 +154,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
     for_each = var.cloud_init_enabled ? [1] : []
     content {
       datastore_id = local.safe_cloud_init_ds
-      user_data = templatefile("${path.module}/../../cloud-init/base-ubuntu.yml", {
-        hostname           = local.safe_hostname
-        domain            = var.domain
-        ssh_public_key    = var.ssh_public_key
-        tailscale_authkey = var.tailscale_authkey
-        install_tailscale = var.install_tailscale
-        install_docker    = var.install_docker
-      })
+      user_data_file_id = var.user_data_file_id
     }
   }
 
