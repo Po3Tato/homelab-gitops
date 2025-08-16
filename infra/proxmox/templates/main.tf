@@ -26,7 +26,7 @@ resource "proxmox_virtual_environment_download_file" "cloud_image" {
   datastore_id = "local"
   node_name    = var.proxmox_node
   url          = var.cloud_image_url
-  file_name    = "template/${var.template_name}-cloudimg.qcow2"
+  file_name    = "${var.template_name}-cloudimg.qcow2"
   
   verify = false
   upload_timeout     = 3600
