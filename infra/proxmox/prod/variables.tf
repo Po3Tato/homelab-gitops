@@ -56,7 +56,7 @@ variable "vm_deployments" {
     node_number     = string 
   }))
   default = {
-    vm = {
+    controlplane = {
       count           = 1
       config_template = "1"
       vm_id_start     = 201
@@ -64,7 +64,7 @@ variable "vm_deployments" {
       node_number     = "1"
     }
     
-    vm = {
+    workers = {
       count           = 3
       config_template = "2"
       vm_id_start     = 210
