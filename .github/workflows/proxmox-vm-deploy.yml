@@ -127,6 +127,9 @@ jobs:
             cat plan.txt >> plan_comment.txt
             echo "```" >> plan_comment.txt
           fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
 
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply'
@@ -138,6 +141,9 @@ jobs:
             tofu plan -var-file=terraform.tfvars -out=tfplan
             tofu apply tfplan
           fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
 
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
@@ -149,6 +155,9 @@ jobs:
             echo "⚠️  Destroy requires auto_approve to be checked for safety"
             exit 1
           fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
 
       - name: Generate Ansible inventory
         if: github.event.inputs.action == 'apply'
@@ -157,6 +166,9 @@ jobs:
           tofu output -json > outputs.json
           
           echo "✅ Infrastructure deployed. Update Ansible inventory with new IPs if needed."
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
 
       - name: Upload artifacts
         if: always()
