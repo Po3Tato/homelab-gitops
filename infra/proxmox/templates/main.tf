@@ -20,7 +20,7 @@ resource "proxmox_virtual_environment_download_file" "cloud_image" {
   url          = var.cloud_image_url
   file_name    = "${var.template_name}-cloudimg.qcow2"
   
-  verify_certificate = false
+  verify = false
   upload_timeout     = 3600
 }
 
