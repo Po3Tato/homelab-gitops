@@ -53,7 +53,7 @@ variable "controlplane_node_number" {
 variable "controlplane_vlan_id" {
   description = "VLAN ID for controlplane VMs"
   type        = number
-  default     = 110
+  default     = null
 }
 
 # Worker VMs
@@ -96,7 +96,7 @@ variable "workers_node_number" {
 variable "workers_vlan_id" {
   description = "VLAN ID for worker VMs"
   type        = number
-  default     = 105
+  default     = null
 }
 
 # === INFRASTRUCTURE SETTINGS ===
