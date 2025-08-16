@@ -11,8 +11,14 @@ variable "environment" {
   default     = "prod"
 }
 
-# === VM DEPLOYMENT CONFIGURATION ===
+# === INFRASTRUCTURE MAPPINGS ===
+variable "node_name" {
+  description = "Primary Proxmox node name"
+  type        = string
+  default     = ""
+}
 
+# === VM DEPLOYMENT CONFIGURATION ===
 # Controlplane VMs
 variable "controlplane_count" {
   description = "Number of controlplane VMs to deploy"
@@ -53,11 +59,6 @@ variable "controlplane_node_number" {
 variable "controlplane_vlan_id" {
   description = "VLAN ID for controlplane VMs (required)"
   type        = number
-  default     = 110
-  validation {
-    condition     = var.controlplane_vlan_id >= 1 && var.controlplane_vlan_id <= 4094
-    error_message = "Controlplane VLAN ID must be between 1 and 4094."
-  }
 }
 
 # Worker VMs
@@ -98,13 +99,8 @@ variable "workers_node_number" {
 }
 
 variable "workers_vlan_id" {
-  description = "VLAN ID for worker VMs (required)"
+  description = "VLAN ID for worker VMs"
   type        = number
-  default     = 105
-  validation {
-    condition     = var.workers_vlan_id >= 1 && var.workers_vlan_id <= 4094
-    error_message = "Workers VLAN ID must be between 1 and 4094."
-  }
 }
 
 # === INFRASTRUCTURE SETTINGS ===
@@ -117,13 +113,11 @@ variable "datastore_disk" {
 variable "network_bridge" {
   description = "Network bridge to use"
   type        = string
-  default     = "vmbr0"
 }
 
 variable "enable_vlans" {
   description = "Enable VLAN support"
   type        = bool
-  default     = false
 }
 
 # === PROXMOX API CONFIGURATION ===
@@ -143,39 +137,33 @@ variable "virtual_environment_api_token" {
 variable "vm_reboot" {
   description = "Reboot VM after creation"
   type        = bool
-  default     = false
 }
 
 variable "agent_enabled" {
   description = "Enable QEMU guest agent"
   type        = bool
-  default     = true
 }
 
 # === CPU HOTPLUG DEFAULTS ===
 variable "default_hotplug_cpu" {
   description = "Default setting for CPU hotplug"
   type        = bool
-  default     = true
 }
 
 variable "default_max_cpu" {
   description = "Default maximum CPU cores for hotplug"
   type        = number
-  default     = 4
 }
 
 variable "default_hotplugged_vcpu" {
   description = "Default number of hotplugged vCPUs if not specified per-VM"
   type        = number
-  default     = 1
 }
 
 # === MACHINE TYPE DEFAULTS ===
 variable "default_machine_type" {
   description = "Default machine type for VMs"
   type        = string
-  default     = "pc"
   validation {
     condition     = var.default_machine_type == null || contains(["pc", "q35"], var.default_machine_type)
     error_message = "Machine type must be 'pc' or 'q35'."
@@ -185,7 +173,6 @@ variable "default_machine_type" {
 variable "default_viommu" {
   description = "Default vIOMMU setting"
   type        = string
-  default     = ""
   validation {
     condition     = var.default_viommu == null || contains(["", "virtio", "intel"], var.default_viommu)
     error_message = "VIOMMU must be empty, 'virtio', or 'intel'."
@@ -196,52 +183,44 @@ variable "default_viommu" {
 variable "default_full_clone" {
   description = "Default setting for full clone or linked clone"
   type        = bool
-  default     = true
 }
 
 # === CPU DEFAULTS ===
 variable "default_cpu_type" {
   description = "CPU model type for emulation"
   type        = string
-  default     = "x86-64-v2-AES"
 }
 
 variable "default_numa" {
   description = "Default NUMA setting if not specified per-VM"
   type        = bool
-  default     = true
 }
 
 # === STORAGE DEFAULTS ===
 variable "default_iothread" {
   description = "Default iothread setting for disks if not specified per-VM"
   type        = bool
-  default     = true
 }
 
 variable "default_ssd_emulation" {
   description = "Default SSD emulation setting for disks if not specified per-VM"
   type        = bool
-  default     = true
 }
 
 variable "default_discard" {
   description = "Disk discard/TRIM setting"
   type        = string
-  default     = "on"
 }
 
 # === TEMPLATE MAPPINGS ===
 variable "proxmox_templates" {
   description = "Map of template numbers to VM IDs"
   type        = map(number)
-  default     = {}
 }
 
 variable "proxmox_nodes" {
   description = "Map of node numbers to node names"
   type        = map(string)
-  default     = {}
 }
 
 
@@ -249,18 +228,15 @@ variable "proxmox_nodes" {
 variable "ssh_public_key" {
   description = "SSH public key for VM access"
   type        = string
-  default     = ""
 }
 
 variable "tailscale_authkeys" {
   description = "Map of Tailscale auth keys by type"
   type        = map(string)
-  default     = {}
   sensitive   = true
 }
 
 variable "domain_name" {
   description = "Domain name for FQDN"
   type        = string
-  default     = "homelab.local"
 }
