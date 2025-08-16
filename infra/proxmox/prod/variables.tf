@@ -219,13 +219,13 @@ variable "default_discard" {
 variable "proxmox_templates" {
   description = "Map of template numbers to VM IDs"
   type        = map(number)
-  default = {}
+  default     = {}
 }
 
 variable "proxmox_nodes" {
   description = "Map of node numbers to node names"
   type        = map(string)
-  default = {}
+  default     = {}
 }
 
 variable "vlan_prod" {

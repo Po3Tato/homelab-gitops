@@ -15,43 +15,43 @@ provider "proxmox" {
 
 locals {
   controlplane_vms = {
-    for i in range(var.controlplane_count) : 
+    for i in range(var.controlplane_count) :
     "controlplane-${format("%02d", i + 1)}" => {
-      name           = "${var.vm_basename}-cp-${format("%02d", i + 1)}"
-      vm_id          = var.controlplane_vm_id_start + i
-      cpu_cores      = var.controlplane_cpu_cores
-      memory         = var.controlplane_memory
-      disk_size      = var.controlplane_disk_size
-      node_number    = var.controlplane_node_number
-      vlan_id        = var.controlplane_vlan_id
-      tags           = ["github-actions", "prod", "controlplane"]
-      tailscale_key  = "controlplane"
-      description    = "Production VM - Control Plane Configuration"
+      name          = "${var.vm_basename}-cp-${format("%02d", i + 1)}"
+      vm_id         = var.controlplane_vm_id_start + i
+      cpu_cores     = var.controlplane_cpu_cores
+      memory        = var.controlplane_memory
+      disk_size     = var.controlplane_disk_size
+      node_number   = var.controlplane_node_number
+      vlan_id       = var.controlplane_vlan_id
+      tags          = ["github-actions", "prod", "controlplane"]
+      tailscale_key = "controlplane"
+      description   = "Production VM - Control Plane Configuration"
     }
   }
   workers_vms = {
-    for i in range(var.workers_count) : 
+    for i in range(var.workers_count) :
     "workers-${format("%02d", i + 1)}" => {
-      name           = "${var.vm_basename}-wkr-${format("%02d", i + 1)}"
-      vm_id          = var.workers_vm_id_start + i
-      cpu_cores      = var.workers_cpu_cores
-      memory         = var.workers_memory
-      disk_size      = var.workers_disk_size
-      node_number    = var.workers_node_number
-      vlan_id        = var.workers_vlan_id
-      tags           = ["github-actions", "prod", "workers"]
-      tailscale_key  = "workers"
-      description    = "Production VM - Worker Node Configuration"
+      name          = "${var.vm_basename}-wkr-${format("%02d", i + 1)}"
+      vm_id         = var.workers_vm_id_start + i
+      cpu_cores     = var.workers_cpu_cores
+      memory        = var.workers_memory
+      disk_size     = var.workers_disk_size
+      node_number   = var.workers_node_number
+      vlan_id       = var.workers_vlan_id
+      tags          = ["github-actions", "prod", "workers"]
+      tailscale_key = "workers"
+      description   = "Production VM - Worker Node Configuration"
     }
   }
-  
+
   all_vms = merge(local.controlplane_vms, local.workers_vms)
 }
 
 module "vms" {
   source   = "../modules/vm"
   for_each = local.all_vms
-  
+
   name      = each.value.name
   vm_id     = each.value.vm_id
   node_name = var.proxmox_nodes[each.value.node_number]
@@ -91,7 +91,7 @@ module "vms" {
   tags = concat(["opentofu", "ubuntu", "prod"], each.value.tags)
 
   hostpci = []
-  
+
   ssh_public_key    = var.ssh_public_key
   tailscale_authkey = var.tailscale_authkeys[each.value.tailscale_key]
   hostname          = each.value.name
@@ -118,10 +118,10 @@ output "vm_info" {
   description = "Complete VM information including node, name, VM ID, and IP address"
   value = {
     for k, v in module.vms : k => {
-      node    = v.node_name
-      name    = v.vm_name
-      vm_id   = v.vm_id
-      ip      = v.primary_ip
+      node  = v.vm_summary.node
+      name  = v.vm_name
+      vm_id = v.vm_id
+      ip    = v.primary_ip
     }
   }
 }
