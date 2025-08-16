@@ -51,9 +51,13 @@ variable "controlplane_node_number" {
 }
 
 variable "controlplane_vlan_id" {
-  description = "VLAN ID for controlplane VMs"
+  description = "VLAN ID for controlplane VMs (required)"
   type        = number
   default     = 110
+  validation {
+    condition     = var.controlplane_vlan_id >= 1 && var.controlplane_vlan_id <= 4094
+    error_message = "Controlplane VLAN ID must be between 1 and 4094."
+  }
 }
 
 # Worker VMs
@@ -94,9 +98,13 @@ variable "workers_node_number" {
 }
 
 variable "workers_vlan_id" {
-  description = "VLAN ID for worker VMs"
+  description = "VLAN ID for worker VMs (required)"
   type        = number
   default     = 105
+  validation {
+    condition     = var.workers_vlan_id >= 1 && var.workers_vlan_id <= 4094
+    error_message = "Workers VLAN ID must be between 1 and 4094."
+  }
 }
 
 # === INFRASTRUCTURE SETTINGS ===
@@ -115,7 +123,7 @@ variable "network_bridge" {
 variable "enable_vlans" {
   description = "Enable VLAN support"
   type        = bool
-  default     = true
+  default     = false
 }
 
 # === PROXMOX API CONFIGURATION ===

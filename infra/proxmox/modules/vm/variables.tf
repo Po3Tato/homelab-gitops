@@ -163,12 +163,11 @@ variable "network_bridge" {
 }
 
 variable "vlan_id" {
-  description = "VLAN ID for network segmentation (null for no VLAN)"
+  description = "VLAN ID for network segmentation (required)"
   type        = number
-  default     = null
   validation {
-    condition     = var.vlan_id == null || (var.vlan_id >= 1 && var.vlan_id <= 4094)
-    error_message = "VLAN ID must be between 1 and 4094 or null."
+    condition     = var.vlan_id >= 1 && var.vlan_id <= 4094
+    error_message = "VLAN ID must be between 1 and 4094."
   }
 }
 

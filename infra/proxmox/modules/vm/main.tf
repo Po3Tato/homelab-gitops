@@ -112,7 +112,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
     content {
       bridge  = var.network_bridge
       model   = "virtio"
-      vlan_id = var.enable_vlans && var.vlan_id != null && var.vlan_id > 0 ? var.vlan_id : null
+      vlan_id = var.enable_vlans ? var.vlan_id : null
     }
   }
 
