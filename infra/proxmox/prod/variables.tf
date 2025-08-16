@@ -105,6 +105,11 @@ variable "datastore_disk" {
   type        = string
 }
 
+variable "datastore_snippets" {
+  description = "Datastore for cloud-init snippets"
+  type        = string
+}
+
 variable "network_bridge" {
   description = "Network bridge to use"
   type        = string
