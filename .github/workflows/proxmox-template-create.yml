@@ -48,7 +48,6 @@ jobs:
       - name: Configure Tailscale exit node
         run: |
           sudo tailscale up --accept-routes --advertise-tags=tag:infra-ci --hostname=github-${{ github.run_id }}
-          tailscale status
 
       - name: Test Proxmox connectivity
         run: |
