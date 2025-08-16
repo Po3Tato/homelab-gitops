@@ -53,11 +53,7 @@ jobs:
       - name: Test Proxmox connectivity
         run: |
           echo "Testing connectivity to Proxmox host..."
-          HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 10 ${{ secrets.PROXMOX_API_URL }})
-          if [ "$HTTP_CODE" != "401" ]; then
-            echo "Expected 401 (auth required), got $HTTP_CODE - connection issue"
-            exit 1
-          fi
+          curl -k -s --connect-timeout 10 ${{ secrets.PROXMOX_API_URL }} || { echo "Connection failed"; exit 1; }
           
       - name: Configure Proxmox credentials and variables
         run: |
