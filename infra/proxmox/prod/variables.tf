@@ -53,7 +53,7 @@ variable "controlplane_node_number" {
 variable "controlplane_vlan_id" {
   description = "VLAN ID for controlplane VMs"
   type        = number
-  default     = null
+  default     = 110
 }
 
 # Worker VMs
@@ -96,7 +96,7 @@ variable "workers_node_number" {
 variable "workers_vlan_id" {
   description = "VLAN ID for worker VMs"
   type        = number
-  default     = null
+  default     = 105
 }
 
 # === INFRASTRUCTURE SETTINGS ===
@@ -110,6 +110,12 @@ variable "network_bridge" {
   description = "Network bridge to use"
   type        = string
   default     = "vmbr0"
+}
+
+variable "enable_vlans" {
+  description = "Enable VLAN support"
+  type        = bool
+  default     = true
 }
 
 # === PROXMOX API CONFIGURATION ===
@@ -169,7 +175,7 @@ variable "default_machine_type" {
 }
 
 variable "default_viommu" {
-  description = "Default vIOMMU setting (empty string for disabled)"
+  description = "Default vIOMMU setting"
   type        = string
   default     = ""
   validation {

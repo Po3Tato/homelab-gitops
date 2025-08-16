@@ -172,6 +172,12 @@ variable "vlan_id" {
   }
 }
 
+variable "enable_vlans" {
+  description = "Enable VLAN support (disable if having SDN conflicts)"
+  type        = bool
+  default     = false
+}
+
 # === VM LIFECYCLE ===
 variable "agent_enabled" {
   description = "Enable QEMU guest agent"

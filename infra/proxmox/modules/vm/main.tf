@@ -107,9 +107,13 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   # === NETWORK CONFIGURATION ===
-  network_device {
-    bridge = var.network_bridge
-    model  = "virtio"
+  dynamic "network_device" {
+    for_each = [1]
+    content {
+      bridge  = var.network_bridge
+      model   = "virtio"
+      vlan_id = var.enable_vlans && var.vlan_id != null && var.vlan_id > 0 ? var.vlan_id : null
+    }
   }
 
   # === OPERATING SYSTEM TYPE ===

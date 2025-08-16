@@ -2,7 +2,7 @@ terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
-      version = "0.81.0"
+      version = "0.78.1"
     }
   }
 }
@@ -84,6 +84,7 @@ module "vms" {
 
   network_bridge = var.network_bridge
   vlan_id        = each.value.vlan_id
+  enable_vlans   = var.enable_vlans
 
   agent_enabled = var.agent_enabled
   vm_reboot     = var.vm_reboot
