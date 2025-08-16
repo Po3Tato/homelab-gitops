@@ -27,5 +27,5 @@ warn_list:
 # Enable progressive mode for better error reporting
 progressive: true
 
-# Set the minimum version of Ansible supported
-min_ansible_version: "2.14"
+# Note: min_ansible_version is not a valid ansible-lint configuration option
+# Minimum Ansible version should be specified in meta/main.yml or requirements files
