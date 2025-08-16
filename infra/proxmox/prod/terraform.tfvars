@@ -2,16 +2,16 @@
 
 # === CONTROLPLANE VMS ===
 controlplane_count        = 3
-controlplane_vm_id_start  = 100
+controlplane_vm_id_start  = 500
 controlplane_cpu_cores    = 2
 controlplane_memory       = 4096
 controlplane_disk_size    = 50
 controlplane_node_number  = "1"
-controlplane_vlan_id      = 105
+controlplane_vlan_id      = 110
 
 # === WORKER VMS ===
 workers_count        = 3
-workers_vm_id_start  = 110
+workers_vm_id_start  = 550
 workers_cpu_cores    = 4
 workers_memory       = 8192
 workers_disk_size    = 100
