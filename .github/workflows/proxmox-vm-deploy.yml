@@ -56,7 +56,6 @@ jobs:
         working-directory: infra/proxmox/${{ github.event.inputs.environment }}
         run: |
           echo "TF_VAR_datastore_disk=${{ secrets.PROXMOX_DATASTORE }}" >> $GITHUB_ENV
-          echo "TF_VAR_datastore_snippets=${{ secrets.PROXMOX_DATASTORE_SNIPPETS }}" >> $GITHUB_ENV
           echo "TF_VAR_network_bridge=${{ secrets.PROXMOX_NETWORK_BRIDGE }}" >> $GITHUB_ENV
           
           echo 'TF_VAR_vm_deployments=${{ secrets.VM_DEPLOYMENTS }}' >> $GITHUB_ENV

@@ -76,12 +76,11 @@ module "vms" {
   machine_type = var.default_machine_type
   viommu       = var.default_viommu
 
-  disk_size             = each.value.disk_size
-  datastore_disk        = var.datastore_disk
-  cloud_init_datastore  = var.datastore_snippets
-  iothread              = var.default_iothread
-  ssd_emulation         = var.default_ssd_emulation
-  discard               = var.default_discard
+  disk_size      = each.value.disk_size
+  datastore_disk = var.datastore_disk
+  iothread       = var.default_iothread
+  ssd_emulation  = var.default_ssd_emulation
+  discard        = var.default_discard
 
   network_bridge = var.network_bridge
   vlan_id        = each.value.vlan_id

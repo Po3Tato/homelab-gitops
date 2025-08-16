@@ -105,10 +105,6 @@ variable "datastore_disk" {
   type        = string
 }
 
-variable "datastore_snippets" {
-  description = "Datastore for cloud-init snippets"
-  type        = string
-}
 
 variable "network_bridge" {
   description = "Network bridge to use"
@@ -127,6 +123,7 @@ variable "virtual_environment_api_token" {
   type        = string
   sensitive   = true
 }
+
 
 # === VM LIFECYCLE DEFAULTS ===
 variable "vm_reboot" {

@@ -153,8 +153,15 @@ resource "proxmox_virtual_environment_vm" "vm" {
   dynamic "initialization" {
     for_each = var.cloud_init_enabled ? [1] : []
     content {
-      datastore_id      = local.safe_cloud_init_ds
-      user_data_file_id = proxmox_virtual_environment_file.cloud_init_config[0].id
+      datastore_id = local.safe_cloud_init_ds
+      user_data = templatefile("${path.module}/../../cloud-init/base-ubuntu.yml", {
+        hostname           = local.safe_hostname
+        domain            = var.domain
+        ssh_public_key    = var.ssh_public_key
+        tailscale_authkey = var.tailscale_authkey
+        install_tailscale = var.install_tailscale
+        install_docker    = var.install_docker
+      })
     }
   }
 
@@ -166,23 +173,3 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 }
 
-# === CLOUD-INIT CONFIG FILE ===
-resource "proxmox_virtual_environment_file" "cloud_init_config" {
-  count = var.cloud_init_enabled ? 1 : 0
-  
-  content_type = "snippets"
-  datastore_id = local.safe_cloud_init_ds
-  node_name    = var.node_name
-
-  source_raw {
-    data = templatefile("${path.module}/../../cloud-init/base-ubuntu.yml", {
-      hostname           = local.safe_hostname
-      domain            = var.domain
-      ssh_public_key    = var.ssh_public_key
-      tailscale_authkey = var.tailscale_authkey
-      install_tailscale = var.install_tailscale
-      install_docker    = var.install_docker
-    })
-    file_name = "cloud-init-${var.name}.yml"
-  }
-}
