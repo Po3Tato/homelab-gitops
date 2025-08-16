@@ -6,8 +6,8 @@ controlplane_vm_id_start  = 100
 controlplane_cpu_cores    = 2
 controlplane_memory       = 4096
 controlplane_disk_size    = 50
-controlplane_node_number  = 0
-controlplane_vlan_id      = 110
+controlplane_node_number  = "1"
+controlplane_vlan_id      = 105
 
 # === WORKER VMS ===
 workers_count        = 3
@@ -15,7 +15,7 @@ workers_vm_id_start  = 110
 workers_cpu_cores    = 4
 workers_memory       = 8192
 workers_disk_size    = 100
-workers_node_number  = 1
+workers_node_number  = "2"
 workers_vlan_id      = 105
 
 # === VM DEFAULTS ===
