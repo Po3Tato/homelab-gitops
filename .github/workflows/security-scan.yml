@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
 
+permissions:
+  security-events: write
+  contents: read
+  actions: read
+
 jobs:
   infrastructure-security:
     name: Infrastructure Security Scan
@@ -26,7 +31,7 @@ jobs:
 
       - name: Upload Checkov results to GitHub Security
         if: always()
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: reports/checkov-results.sarif
           category: "Infrastructure Security"
@@ -45,8 +50,6 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: main
-          head: HEAD
           extra_args: --debug --only-verified
 
   dependency-scanning:
@@ -69,7 +72,7 @@ jobs:
 
       - name: Check Python dependencies for vulnerabilities
         run: |
-          pip freeze | safety check --stdin || true
+          pip freeze | safety scan --stdin || true
 
       - name: Check GitHub Actions for security issues
         uses: github/super-linter@v4
@@ -103,7 +106,7 @@ jobs:
 
       - name: Upload tfsec results to GitHub Security
         if: always()
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: tfsec-results.sarif
           category: "Terraform Security"

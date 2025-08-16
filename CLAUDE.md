@@ -16,11 +16,13 @@ Infrastructure as Code with OpenTofu/Terraform, configuration management with An
   - `proxmox-template-create.yml`: Create Proxmox VM templates
   - `proxmox-vm-deploy.yml`: Deploy Proxmox VMs
   - `vultr-deploy.yml`: Deploy Vultr instances
+  - `security-scan.yml`: Security scanning and vulnerability assessment
   
 - `infra/`: OpenTofu/Terraform configurations
   - `proxmox/`: On-premises infrastructure
     - `prod/`: Production VMs and containers
     - `prod-proxy/`: Proxy/load balancer infrastructure
+    - `templates/`: VM template management and creation
     - `modules/`: Reusable VM and LXC modules
     - `cloud-init/`: Proxmox-specific cloud-init templates
   - `vultr/`: Cloud infrastructure
