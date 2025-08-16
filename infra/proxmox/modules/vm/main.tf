@@ -110,7 +110,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   network_device {
     bridge  = var.network_bridge
     model   = "virtio"
-    vlan_id = var.vlan_id
+    vlan_id = var.vlan_id != null && var.vlan_id > 0 ? var.vlan_id : null
   }
 
   # === OPERATING SYSTEM TYPE ===
