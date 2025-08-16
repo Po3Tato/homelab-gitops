@@ -57,7 +57,7 @@ variable "vm_deployments" {
   }))
   default = {
     vm = {
-      count           = 2
+      count           = 1
       config_template = "1"
       vm_id_start     = 201
       name_prefix     = "node01"
@@ -65,7 +65,7 @@ variable "vm_deployments" {
     }
     
     vm = {
-      count           = 1
+      count           = 3
       config_template = "2"
       vm_id_start     = 210
       name_prefix     = "node02"
