@@ -228,10 +228,6 @@ variable "proxmox_nodes" {
   default     = {}
 }
 
-variable "vlan_prod" {
-  description = "Production VLAN ID"
-  type        = number
-}
 
 # === CLOUD-INIT CONFIGURATION ===
 variable "ssh_public_key" {
