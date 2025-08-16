@@ -51,7 +51,7 @@ resource "proxmox_virtual_environment_vm" "template" {
   disk {
     datastore_id = "local-lvm"
     import_from  = proxmox_virtual_environment_download_file.cloud_image.id
-    interface    = "scsi0"
+    interface    = "virtio0"
     size         = 20
     iothread     = true
     ssd          = true
@@ -79,7 +79,7 @@ resource "proxmox_virtual_environment_vm" "template" {
     }
 
     user_account {
-      username = "ubuntu"
+      username = var.template_username
       keys     = []
     }
   }

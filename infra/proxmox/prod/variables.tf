@@ -167,3 +167,15 @@ variable "default_discard" {
   type        = string
   default     = "on"
 }
+
+variable "override_template_id" {
+  description = "Override template VM ID for all VMs (optional, from workflow input)"
+  type        = number
+  default     = null
+}
+
+variable "override_node_name" {
+  description = "Override target node for all VMs (optional, from workflow input)"
+  type        = string
+  default     = null
+}

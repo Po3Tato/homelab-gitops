@@ -60,6 +60,7 @@ jobs:
           echo "TF_VAR_virtual_environment_api_token=${{ secrets.PROXMOX_API_TOKEN }}" >> $GITHUB_ENV
           echo "TF_VAR_template_name=${{ inputs.template_name }}" >> $GITHUB_ENV
           echo "TF_VAR_cloud_image_url=${{ inputs.cloud_image_url }}" >> $GITHUB_ENV
+          echo "TF_VAR_template_username=${{ secrets.TEMPLATE_USERNAME }}" >> $GITHUB_ENV
           
           # Set node and VM ID based on selection
           case "${{ inputs.proxmox_node }}" in

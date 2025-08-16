@@ -23,9 +23,9 @@ module "vms" {
   
   name      = each.value.name
   vm_id     = each.value.vm_id
-  node_name = each.value.node_name
+  node_name = var.override_node_name != null ? var.override_node_name : each.value.node_name
 
-  clone_vm_id        = each.value.clone_vm_id
+  clone_vm_id        = var.override_template_id != null ? var.override_template_id : each.value.clone_vm_id
   clone_node_name    = lookup(each.value, "clone_node_name", each.value.node_name)
   clone_datastore_id = lookup(each.value, "clone_datastore_id", var.datastore_disk)
   full_clone         = lookup(each.value, "full_clone", var.default_full_clone)

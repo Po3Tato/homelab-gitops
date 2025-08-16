@@ -28,3 +28,8 @@ variable "virtual_environment_api_token" {
   type        = string
   sensitive   = true
 }
+
+variable "template_username" {
+  description = "Username for the template user account"
+  type        = string
+}
