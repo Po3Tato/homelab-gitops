@@ -13,9 +13,17 @@ provider "proxmox" {
   insecure  = true
 }
 
+data "proxmox_virtual_environment_datastores" "available" {
+  node_name = var.proxmox_node
+}
+
+output "datastores" {
+  value = data.proxmox_virtual_environment_datastores.available.datastores
+}
+
 resource "proxmox_virtual_environment_download_file" "cloud_image" {
   content_type = "import"
-  datastore_id = "local"
+  datastore_id = "local-lvm"
   node_name    = var.proxmox_node
   url          = var.cloud_image_url
   file_name    = "${var.template_name}-cloudimg.qcow2"
