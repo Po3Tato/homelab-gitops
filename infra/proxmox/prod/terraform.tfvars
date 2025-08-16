@@ -1,5 +1,2 @@
-# Proxmox Production Configuration
-# All variables are now passed via TF_VAR environment variables from GitHub Secrets
-
-vm_basename = "cicd"
+vm_basename = "mn"
 environment = "prod"

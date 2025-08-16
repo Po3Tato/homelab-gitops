@@ -14,29 +14,36 @@ provider "proxmox" {
 }
 
 locals {
-  generated_vms = {
-    for deployment_key, deployment in var.vm_deployments : 
-    deployment_key => [
-      for i in range(deployment.count) : {
-        key            = "${deployment_key}-${format("%02d", i + 1)}"
-        name           = "${deployment.name_prefix}-${format("%02d", i + 1)}"
-        vm_id          = deployment.vm_id_start + i
-        config_template = deployment.config_template
-        template_config = var.vm_config_templates[deployment.config_template]
-      }
-    ]
+  controlplane_vms = {
+    for i in range(var.controlplane_count) : 
+    "controlplane-${format("%02d", i + 1)}" => {
+      name           = "${var.vm_basename}-cp-${format("%02d", i + 1)}"
+      vm_id          = var.controlplane_vm_id_start + i
+      cpu_cores      = var.controlplane_cpu_cores
+      memory         = var.controlplane_memory
+      disk_size      = var.controlplane_disk_size
+      node_number    = var.controlplane_node_number
+      tags           = ["github-actions", "prod", "controlplane"]
+      tailscale_key  = "controlplane"
+      description    = "Production VM - Control Plane Configuration"
+    }
   }
-  
-  vms = {
-    for deployment_key, vms in local.generated_vms :
-    deployment_key => {
-      for vm in vms : vm.key => vm
+  workers_vms = {
+    for i in range(var.workers_count) : 
+    "workers-${format("%02d", i + 1)}" => {
+      name           = "${var.vm_basename}-wkr-${format("%02d", i + 1)}"
+      vm_id          = var.workers_vm_id_start + i
+      cpu_cores      = var.workers_cpu_cores
+      memory         = var.workers_memory
+      disk_size      = var.workers_disk_size
+      node_number    = var.workers_node_number
+      tags           = ["github-actions", "prod", "workers"]
+      tailscale_key  = "workers"
+      description    = "Production VM - Worker Node Configuration"
     }
   }
   
-  all_vms = merge([
-    for deployment_key, vm_map in local.vms : vm_map
-  ]...)
+  all_vms = merge(local.controlplane_vms, local.workers_vms)
 }
 
 module "vms" {
@@ -45,29 +52,29 @@ module "vms" {
   
   name      = each.value.name
   vm_id     = each.value.vm_id
-  node_name = var.proxmox_nodes[each.value.template_config.node_number]
+  node_name = var.proxmox_nodes[each.value.node_number]
 
-  clone_vm_id        = var.proxmox_templates[each.value.template_config.node_number]
-  clone_node_name    = var.proxmox_nodes[each.value.template_config.node_number]
+  clone_vm_id        = var.proxmox_templates[each.value.node_number]
+  clone_node_name    = var.proxmox_nodes[each.value.node_number]
   clone_datastore_id = var.datastore_disk
   full_clone         = var.default_full_clone
 
-  description = each.value.template_config.description
+  description = each.value.description
 
-  cpu_cores       = each.value.template_config.cpu_cores
+  cpu_cores       = each.value.cpu_cores
   cpu_type        = var.default_cpu_type
   hotplug_cpu     = var.default_hotplug_cpu
   hotplugged_vcpu = var.default_hotplugged_vcpu
   max_cpu         = var.default_max_cpu
   numa            = var.default_numa
 
-  memory          = each.value.template_config.memory
+  memory          = each.value.memory
   floating_memory = null
 
   machine_type = var.default_machine_type
   viommu       = var.default_viommu
 
-  disk_size      = each.value.template_config.disk_size
+  disk_size      = each.value.disk_size
   datastore_disk = var.datastore_disk
   iothread       = var.default_iothread
   ssd_emulation  = var.default_ssd_emulation
@@ -79,13 +86,12 @@ module "vms" {
   agent_enabled = var.agent_enabled
   vm_reboot     = var.vm_reboot
 
-  tags = concat(["opentofu", "ubuntu", "prod"], each.value.template_config.tags)
+  tags = concat(["opentofu", "ubuntu", "prod"], each.value.tags)
 
   hostpci = []
   
-  # Cloud-init configuration
   ssh_public_key    = var.ssh_public_key
-  tailscale_authkey = var.tailscale_authkeys[each.value.template_config.tailscale_authkey]
+  tailscale_authkey = var.tailscale_authkeys[each.value.tailscale_key]
   hostname          = each.value.name
   domain            = var.domain_name
   install_tailscale = true

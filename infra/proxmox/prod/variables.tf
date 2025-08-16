@@ -11,67 +11,80 @@ variable "environment" {
   default     = "prod"
 }
 
-# === VM CONFIGURATION TEMPLATES ===
-variable "vm_config_templates" {
-  description = "VM configuration templates"
-  type = map(object({
-    cpu_cores         = number
-    memory            = number
-    disk_size         = number
-    tags              = list(string)
-    tailscale_authkey = string
-    description       = string
-    node_number       = string
-  }))
-  default = {
-    "1" = {
-      cpu_cores         = 2
-      memory            = 4096
-      disk_size         = 32
-      tags              = ["github-actions", "prod"]
-      tailscale_authkey = "controlplane"
-      description       = "Production VM - Control Plane Configuration"
-      node_number       = "1"
-    }
-    "2" = {
-      cpu_cores         = 4
-      memory            = 8192
-      disk_size         = 64
-      tags              = ["github-actions", "prod"]
-      tailscale_authkey = "workers"
-      description       = "Production VM - Worker Node Configuration"
-      node_number       = "2"
-    }
-  }
+# === VM DEPLOYMENT CONFIGURATION ===
+
+# Controlplane VMs
+variable "controlplane_count" {
+  description = "Number of controlplane VMs to deploy"
+  type        = number
+  default     = 1
 }
 
-# === VM DEPLOYMENT CONFIGURATION ===
-variable "vm_deployments" {
-  description = "Number of VMs to deploy for each configuration template"
-  type = map(object({
-    count           = number
-    config_template = string
-    vm_id_start     = number
-    name_prefix     = string
-    node_number     = string 
-  }))
-  default = {
-    controlplane = {
-      count           = 1
-      config_template = "1"
-      vm_id_start     = 201
-      name_prefix     = "node01"
-      node_number     = "1"
-    }
-    
-    workers = {
-      count           = 3
-      config_template = "2"
-      vm_id_start     = 210
-      name_prefix     = "node02"
-      node_number     = "1"
-    }
-  }
+variable "controlplane_vm_id_start" {
+  description = "Starting VM ID for controlplane VMs"
+  type        = number
+  default     = 500
+}
+
+variable "controlplane_cpu_cores" {
+  description = "CPU cores for controlplane VMs"
+  type        = number
+  default     = 2
+}
+
+variable "controlplane_memory" {
+  description = "Memory (MB) for controlplane VMs"
+  type        = number
+  default     = 4096
+}
+
+variable "controlplane_disk_size" {
+  description = "Disk size (GB) for controlplane VMs"
+  type        = number
+  default     = 32
+}
+
+variable "controlplane_node_number" {
+  description = "Proxmox node number for controlplane VMs"
+  type        = string
+  default     = "1"
+}
+
+# Worker VMs
+variable "workers_count" {
+  description = "Number of worker VMs to deploy"
+  type        = number
+  default     = 2
+}
+
+variable "workers_vm_id_start" {
+  description = "Starting VM ID for worker VMs"
+  type        = number
+  default     = 550
+}
+
+variable "workers_cpu_cores" {
+  description = "CPU cores for worker VMs"
+  type        = number
+  default     = 4
+}
+
+variable "workers_memory" {
+  description = "Memory (MB) for worker VMs"
+  type        = number
+  default     = 8192
+}
+
+variable "workers_disk_size" {
+  description = "Disk size (GB) for worker VMs"
+  type        = number
+  default     = 64
+}
+
+variable "workers_node_number" {
+  description = "Proxmox node number for worker VMs"
+  type        = string
+  default     = "2"
 }
 
 # === INFRASTRUCTURE SETTINGS ===
