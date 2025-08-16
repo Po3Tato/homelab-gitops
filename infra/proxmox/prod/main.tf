@@ -23,6 +23,7 @@ locals {
       memory         = var.controlplane_memory
       disk_size      = var.controlplane_disk_size
       node_number    = var.controlplane_node_number
+      vlan_id        = var.controlplane_vlan_id
       tags           = ["github-actions", "prod", "controlplane"]
       tailscale_key  = "controlplane"
       description    = "Production VM - Control Plane Configuration"
@@ -37,6 +38,7 @@ locals {
       memory         = var.workers_memory
       disk_size      = var.workers_disk_size
       node_number    = var.workers_node_number
+      vlan_id        = var.workers_vlan_id
       tags           = ["github-actions", "prod", "workers"]
       tailscale_key  = "workers"
       description    = "Production VM - Worker Node Configuration"
@@ -81,7 +83,7 @@ module "vms" {
   discard        = var.default_discard
 
   network_bridge = var.network_bridge
-  vlan_id        = var.vlan_prod
+  vlan_id        = each.value.vlan_id
 
   agent_enabled = var.agent_enabled
   vm_reboot     = var.vm_reboot

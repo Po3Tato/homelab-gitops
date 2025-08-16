@@ -50,6 +50,12 @@ variable "controlplane_node_number" {
   default     = "1"
 }
 
+variable "controlplane_vlan_id" {
+  description = "VLAN ID for controlplane VMs"
+  type        = number
+  default     = 110
+}
+
 # Worker VMs
 variable "workers_count" {
   description = "Number of worker VMs to deploy"
@@ -85,6 +91,12 @@ variable "workers_node_number" {
   description = "Proxmox node number for worker VMs"
   type        = string
   default     = "2"
+}
+
+variable "workers_vlan_id" {
+  description = "VLAN ID for worker VMs"
+  type        = number
+  default     = 105
 }
 
 # === INFRASTRUCTURE SETTINGS ===
