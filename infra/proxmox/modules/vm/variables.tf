@@ -21,7 +21,7 @@ variable "node_name" {
 variable "description" {
   description = "VM description visible in Proxmox GUI"
   type        = string
-  default     = "Managed by OpenTofu"
+  default     = "Managed by OpenTofu & GitHub Actions"
 }
 
 variable "tags" {
